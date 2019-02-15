@@ -63,10 +63,10 @@ func In(i Invariable, in Condition) {
 // logic. As with In, Out will check the postcondition if specified, and then
 // the invariant, no matter what.
 func Out(i Invariable, out Condition) {
+	i.Invariant(assertInvariantOut)
 	if out != nil {
 		out(assertOut)
 	}
-	i.Invariant(assertInvariantOut)
 }
 
 // OutAndRestore is similar to Out, however a third agument allows a restore
@@ -79,36 +79,9 @@ func Out(i Invariable, out Condition) {
 // the error will be further decorated to annotate restore failure.
 func OutAndRestore(i Invariable, out Condition, restore Restore) {
 	defer handleRestore(i, out, restore)
+	i.Invariant(assertInvariantOutRestorable)
 	if out != nil {
 		out(assertOutRestorable)
-	}
-	i.Invariant(assertInvariantOutRestorable)
-}
-
-// InAndOut combines In and Out into a nested series of function calls. When
-// Out is closed over by In, it allows some level of statefulness, such as
-// keeping track of the value prior to entry and comparing it to the new value
-// upon exit, by using a local, closured, variable. Remember, only asserts and
-// local variables should be used, anything causing state mutations or external
-// side effects is a bad idea.
-func InAndOut(i Invariable, in PreToPostCondition) EnclosedOut {
-	out := in(assertIn)
-	i.Invariant(assertInvariantIn)
-	return func() {
-		out(assertOut)
-		i.Invariant(assertInvariantOut)
-	}
-}
-
-// InAndOutAndRestore is a combination of In and OutAndRestore and operates the
-// same as InAndOut, with restore functionality.
-func InAndOutAndRestore(i Invariable, in PreToPostConditionWithRestore) EnclosedOut {
-	out, restore := in(assertIn)
-	i.Invariant(assertInvariantIn)
-	return func() {
-		defer handleRestore(i, out, restore)
-		out(assertOutRestorable)
-		i.Invariant(assertInvariantOutRestorable)
 	}
 }
 

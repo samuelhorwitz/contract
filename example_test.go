@@ -37,15 +37,19 @@ func (s *Sample) SetName(newName string) {
 }
 
 func (s *Sample) SetNumber(newNumber float64) {
-	defer contract.InAndOut(s, func(assert contract.Assert) contract.Condition {
-		// In
+	// Go's block scoping allows us to rope off local variables and group the
+	// pre and post conditions in a syntactically pleasing way. It may be best
+	// to always use a block scope wrapper, just for readability, when declaring
+	// conditions.
+	{
 		oldNumber := s.number
-		assert(newNumber >= 0, errors.New("New number must be positive"))
-		return func(assert contract.Assert) {
-			// Out
+		contract.In(s, func(assert contract.Assert) {
+			assert(newNumber >= 0, errors.New("New number must be positive"))
+		})
+		defer contract.Out(s, func(assert contract.Assert) {
 			assert(oldNumber < s.number, errors.New("New number must be greater than old number"))
-		}
-	})()
+		})
+	}
 	s.number = newNumber * 1.6
 }
 
