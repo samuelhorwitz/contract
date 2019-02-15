@@ -5,7 +5,7 @@ package contract
 //
 // The Invariant method is defined on the type and is responsible for asserting
 // the correctness of the state. It will be run after every precondition call
-// and every postcondition call.
+// and before every postcondition call.
 type Invariable interface {
 	Invariant(Assert)
 }
