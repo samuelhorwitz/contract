@@ -60,8 +60,8 @@ func In(i Invariable, in Condition) {
 // Out is the postcondition hook register. We recommend postconditions follow
 // preconditions immediately, using defer. This way the top of the function is
 // set aside for contract checks, and the rest of the function body is business
-// logic. As with In, Out will check the postcondition if specified, and then
-// the invariant, no matter what.
+// logic. Out will first run the invariant check and then follow it with the
+// postcondition check.
 func Out(i Invariable, out Condition) {
 	i.Invariant(assertInvariantOut)
 	if out != nil {
