@@ -19,9 +19,8 @@ type AssertError struct {
 func (err AssertError) Error() string {
 	if err.restoreErr != nil {
 		return fmt.Sprintf("%s; %s", err.restoreErr.Error(), err.err.Error())
-	} else {
-		return err.err.Error()
 	}
+	return err.err.Error()
 }
 
 // RestoreAttempted reveals whether this error attempted to perform a restore.
