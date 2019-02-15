@@ -32,28 +32,8 @@
 // use this library and then strip it out for production. The intended use is to
 // ensure sanity in a production environment. However, some people seem to
 // subscribe to a different view on this, so you may use the build tag "nodbc"
-// to swap in minimally defined replacement types and no-op replacement
-// functions.
+// to swap in no-op replacement functions.
 package contract
-
-// Invariable is an interface that must be implemented by types desiring to have
-// contractual checks.
-//
-// The Invariant method is defined on the type and is responsible for asserting
-// the correctness of the state. It will be run after every precondition call
-// and every postcondition call.
-type Invariable interface {
-	Invariant(Assert)
-}
-
-// Condition is a type which represents a simple pre or postcondition function
-// type.
-type Condition func(Assert)
-type Restore func()
-
-type enclosedOut func()
-type preToPostCondition func(Assert) Condition
-type preToPostConditionWithRestore func(Assert) (Condition, Restore)
 
 // Construct should be called wherever an Invariable type is instantiated.
 // Idiomatically, many Go programs will use New functions for this. Go will not
@@ -94,7 +74,9 @@ func Out(i Invariable, out Condition) {
 // function will be called before the panic is re-thrown. Restore will not
 // rescue a panic, it will only allow you to clean up the state before leaving
 // the function scope entirely. This could be useful if farther up you intend to
-// recover normally, and you do not want to be in an undefined state.
+// recover normally, and you do not want to be in an undefined state. The post-
+// restore state must also pass all postcondition and invariant checks, or the
+// error will be further decorated to annotate restore failure.
 func OutAndRestore(i Invariable, out Condition, restore Restore) {
 	defer handleRestore(i, out, restore)
 	if out != nil {
@@ -109,7 +91,7 @@ func OutAndRestore(i Invariable, out Condition, restore Restore) {
 // upon exit, by using a local, closured, variable. Remember, only asserts and
 // local variables should be used, anything causing state mutations or external
 // side effects is a bad idea.
-func InAndOut(i Invariable, in preToPostCondition) enclosedOut {
+func InAndOut(i Invariable, in PreToPostCondition) EnclosedOut {
 	out := in(assertIn)
 	i.Invariant(assertInvariantIn)
 	return func() {
@@ -118,12 +100,15 @@ func InAndOut(i Invariable, in preToPostCondition) enclosedOut {
 	}
 }
 
-// InAndOutAndRestore is a combination of In and OutAndRestore.
-func InAndOutAndRestore(i Invariable, in preToPostConditionWithRestore) enclosedOut {
+// InAndOutAndRestore is a combination of In and OutAndRestore and operates the
+// same as InAndOut, with restore functionality.
+func InAndOutAndRestore(i Invariable, in PreToPostConditionWithRestore) EnclosedOut {
 	out, restore := in(assertIn)
 	i.Invariant(assertInvariantIn)
 	return func() {
-		OutAndRestore(i, out, restore)
+		defer handleRestore(i, out, restore)
+		out(assertOut)
+		i.Invariant(assertInvariantOut)
 	}
 }
 

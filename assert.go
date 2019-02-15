@@ -1,5 +1,3 @@
-// +build !nodbc
-
 package contract
 
 import (
@@ -11,46 +9,80 @@ import (
 type Assert func(okay bool, reason string)
 
 // AssertError is a decorated string implementing the error interface.
-type AssertError string
+type AssertError struct {
+	err              error
+	restoreErr       error
+	restoreAttempted bool
+}
 
+// Error causes AssertError to implement the error interface.
 func (err AssertError) Error() string {
-	return string(err)
+	if err.restoreErr != nil {
+		return fmt.Sprintf("%s; %s", err.restoreErr.Error(), err.err.Error())
+	} else {
+		return err.err.Error()
+	}
+}
+
+// RestoreAttempted reveals whether this error attempted to perform a restore.
+func (err AssertError) RestoreAttempted() bool {
+	return err.restoreAttempted
+}
+
+// RestoreSuccessful reveals whether this error was successful at performing a
+// restore as well as whether a restore was attempted.
+func (err AssertError) RestoreSuccessful() (successful bool, attempted bool) {
+	return err.restoreAttempted && err.restoreErr == nil, err.restoreAttempted
+}
+
+// RestoreFailed reveals whether this error was unsuccessful at performing a
+// restore as well as whether a restore was attempted.
+func (err AssertError) RestoreFailed() (failed bool, attempted bool) {
+	return err.restoreAttempted && err.restoreErr != nil, err.restoreAttempted
 }
 
 func assertIn(okay bool, reason string) {
-	assert(okay, fmt.Sprintf("Precondition failed: %s", reason))
+	assert(okay, fmt.Errorf("Precondition failed: %s", reason))
 }
 
 func assertOut(okay bool, reason string) {
-	assert(okay, fmt.Sprintf("Postcondition failed: %s", reason))
+	assert(okay, fmt.Errorf("Postcondition failed: %s", reason))
 }
 
 func assertOutRestore(originalError AssertError) Assert {
 	return func(okay bool, reason string) {
-		assert(okay, fmt.Sprintf("Post-failure restore failed: %s; Original: %s", reason, originalError))
+		assertRestore(okay, originalError, fmt.Errorf("Post-failure restore failed: %s", reason))
 	}
 }
 
 func assertInvariantConstruct(okay bool, reason string) {
-	assert(okay, fmt.Sprintf("Initialization invariant failed: %s", reason))
+	assert(okay, fmt.Errorf("Initialization invariant failed: %s", reason))
 }
 
 func assertInvariantIn(okay bool, reason string) {
-	assert(okay, fmt.Sprintf("Precondition invariant failed: %s", reason))
+	assert(okay, fmt.Errorf("Precondition invariant failed: %s", reason))
 }
 
 func assertInvariantOut(okay bool, reason string) {
-	assert(okay, fmt.Sprintf("Postcondition invariant failed: %s", reason))
+	assert(okay, fmt.Errorf("Postcondition invariant failed: %s", reason))
 }
 
 func assertInvariantRestore(originalError AssertError) Assert {
 	return func(okay bool, reason string) {
-		assert(okay, fmt.Sprintf("Post-failure restore invariant failed: %s; Original: %s", reason, originalError))
+		assertRestore(okay, originalError, fmt.Errorf("Post-failure restore invariant failed: %s", reason))
 	}
 }
 
-func assert(okay bool, decoratedReason string) {
+func assert(okay bool, decoratedReason error) {
 	if !okay {
-		panic(AssertError(decoratedReason))
+		panic(AssertError{err: decoratedReason})
+	}
+}
+
+func assertRestore(okay bool, originalError AssertError, restoreError error) {
+	originalError.restoreAttempted = true
+	if !okay {
+		originalError.restoreErr = restoreError
+		panic(originalError)
 	}
 }
