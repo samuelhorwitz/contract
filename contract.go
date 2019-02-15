@@ -74,9 +74,9 @@ func Out(i Invariable, out Condition) {
 // function will be called before the panic is re-thrown. Restore will not
 // rescue a panic, it will only allow you to clean up the state before leaving
 // the function scope entirely. This could be useful if farther up you intend to
-// recover normally, and you do not want to be in an undefined state. The post-
-// restore state must also pass all postcondition and invariant checks, or the
-// error will be further decorated to annotate restore failure.
+// recover normally, and you do not want to be in an undefined state. The
+// post-restore state must also pass all postcondition and invariant checks, or
+// the error will be further decorated to annotate restore failure.
 func OutAndRestore(i Invariable, out Condition, restore Restore) {
 	defer handleRestore(i, out, restore)
 	if out != nil {
