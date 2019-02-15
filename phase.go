@@ -11,17 +11,17 @@ const (
 	// PreconditionInvariantPhase is in the invariant check that occurs after
 	// the precondition check.
 	PreconditionInvariantPhase
-	// PostconditionPhase is in the postcondition check.
-	PostconditionPhase
 	// PostconditionInvariantPhase is in the invariant check that occurs after
 	// the postcondition check.
 	PostconditionInvariantPhase
-	// PostRestorePhase is in the postcondition check that occurs after a
-	// restore is attempted.
-	PostRestorePhase
+	// PostconditionPhase is in the postcondition check.
+	PostconditionPhase
 	// PostRestoreInvariantPhase is in the invariant check that occurs after the
 	// postcondition check after a restore is attempted.
 	PostRestoreInvariantPhase
+	// PostRestorePhase is in the postcondition check that occurs after a
+	// restore is attempted.
+	PostRestorePhase
 )
 
 func (p Phase) String() string {
