@@ -8,19 +8,45 @@ import (
 // boolean as well as an error to panic with if this expression is false.
 type Assert func(okay bool, reason error)
 
-// AssertError is a decorated string implementing the error interface.
+// AssertError is an error that occured during a contract check.
 type AssertError struct {
-	Err         error
-	OriginalErr error
-	Phase       Phase
+	Err   error
+	Phase Phase
 }
 
 func (err AssertError) Error() string {
-	errString := fmt.Sprintf("%s check failed: %s", err.Phase, err.Err)
-	if err.OriginalErr != nil {
-		return fmt.Sprintf("%s; %s", errString, err.OriginalErr.Error())
+	return fmt.Sprintf("%s check failed: %s", err.Phase, err.Err)
+}
+
+// AssertErrorRestorable is an error that occurred during a contract check and
+// expects to be restored from.
+type AssertErrorRestorable struct {
+	Err   error
+	Phase Phase
+}
+
+func (err AssertErrorRestorable) Error() string {
+	return fmt.Sprintf("%s check failed: %s", err.Phase, err.Err)
+}
+
+// AssertError returns an unrestorable AssertError.
+func (err AssertErrorRestorable) AssertError() AssertError {
+	return AssertError{
+		Err:   err.Err,
+		Phase: err.Phase,
 	}
-	return errString
+}
+
+// AssertRestoreError is an error that occured during the restore phase of a
+// contract check failure.
+type AssertRestoreError struct {
+	Err         error
+	OriginalErr AssertErrorRestorable
+	Phase       Phase
+}
+
+func (err AssertRestoreError) Error() string {
+	return fmt.Sprintf("%s failed: %s; %s", err.Phase, err.Err, err.OriginalErr.Error())
 }
 
 func assertIn(okay bool, reason error) {
@@ -37,9 +63,16 @@ func assertOut(okay bool, reason error) {
 	})
 }
 
-func assertOutRestore(originalError AssertError) Assert {
+func assertOutRestorable(okay bool, reason error) {
+	assert(okay, AssertErrorRestorable{
+		Err:   reason,
+		Phase: PostconditionPhase,
+	})
+}
+
+func assertOutRestore(originalError AssertErrorRestorable) Assert {
 	return func(okay bool, reason error) {
-		assert(okay, AssertError{
+		assert(okay, AssertRestoreError{
 			Err:         reason,
 			OriginalErr: originalError,
 			Phase:       PostRestorePhase,
@@ -68,9 +101,16 @@ func assertInvariantOut(okay bool, reason error) {
 	})
 }
 
-func assertInvariantRestore(originalError AssertError) Assert {
+func assertInvariantOutRestorable(okay bool, reason error) {
+	assert(okay, AssertErrorRestorable{
+		Err:   reason,
+		Phase: PostconditionInvariantPhase,
+	})
+}
+
+func assertInvariantRestore(originalError AssertErrorRestorable) Assert {
 	return func(okay bool, reason error) {
-		assert(okay, AssertError{
+		assert(okay, AssertRestoreError{
 			Err:         reason,
 			OriginalErr: originalError,
 			Phase:       PostRestoreInvariantPhase,
@@ -78,7 +118,7 @@ func assertInvariantRestore(originalError AssertError) Assert {
 	}
 }
 
-func assert(okay bool, decoratedReason AssertError) {
+func assert(okay bool, decoratedReason error) {
 	if !okay {
 		panic(decoratedReason)
 	}

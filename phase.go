@@ -16,6 +16,8 @@ const (
 	// PostconditionInvariantPhase is in the invariant check that occurs after
 	// the postcondition check.
 	PostconditionInvariantPhase
+	// RestorePhase is prior to the restore attempt.
+	RestorePhase
 	// PostRestorePhase is in the postcondition check that occurs after a
 	// restore is attempted.
 	PostRestorePhase
@@ -36,6 +38,8 @@ func (p Phase) String() string {
 		return "Postcondition"
 	case PostconditionInvariantPhase:
 		return "Postcondition invariant"
+	case RestorePhase:
+		return "Restore"
 	case PostRestorePhase:
 		return "Post-restore"
 	case PostRestoreInvariantPhase:
