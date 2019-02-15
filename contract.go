@@ -68,32 +68,3 @@ func Out(i Invariable, out Condition) {
 		out(assertOut)
 	}
 }
-
-// OutAndRestore is similar to Out, however a third agument allows a restore
-// function to be specified. In case of a contract-based panic, the restore
-// function will be called before the panic is re-thrown. Restore will not
-// rescue a panic, it will only allow you to clean up the state before leaving
-// the function scope entirely. This could be useful if farther up you intend to
-// recover normally, and you do not want to be in an undefined state. The
-// post-restore state must also pass all postcondition and invariant checks, or
-// the error will be further decorated to annotate restore failure.
-func OutAndRestore(i Invariable, out Condition, restore Restore) {
-	defer handleRestore(i, out, restore)
-	i.Invariant(assertInvariantOutRestorable)
-	if out != nil {
-		out(assertOutRestorable)
-	}
-}
-
-func handleRestore(i Invariable, out Condition, restore Restore) {
-	if r := recover(); r != nil {
-		if r, ok := r.(AssertErrorRestorable); ok {
-			restore()
-			i.Invariant(assertInvariantRestore(r))
-			out(assertOutRestore(r))
-			panic(r.AssertError())
-		} else {
-			panic(r)
-		}
-	}
-}

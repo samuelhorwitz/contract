@@ -13,6 +13,3 @@ type Invariable interface {
 // Condition is a type which represents a simple pre or postcondition function
 // type.
 type Condition func(Assert)
-
-// Restore is a type which represents a restore function.
-type Restore func()
