@@ -5,83 +5,81 @@ import (
 )
 
 // Assert is a function type which takes an expression that evaluates to a
-// boolean as well as a description of the failure case, should it occur.
-type Assert func(okay bool, reason string)
+// boolean as well as an error to panic with if this expression is false.
+type Assert func(okay bool, reason error)
 
 // AssertError is a decorated string implementing the error interface.
 type AssertError struct {
-	err              error
-	restoreErr       error
-	restoreAttempted bool
+	Err         error
+	OriginalErr error
+	Phase       Phase
 }
 
-// Error causes AssertError to implement the error interface.
 func (err AssertError) Error() string {
-	if err.restoreErr != nil {
-		return fmt.Sprintf("%s; %s", err.restoreErr.Error(), err.err.Error())
+	errString := fmt.Sprintf("%s check failed: %s", err.Phase, err.Err)
+	if err.OriginalErr != nil {
+		return fmt.Sprintf("%s; %s", errString, err.OriginalErr.Error())
 	}
-	return err.err.Error()
+	return errString
 }
 
-// RestoreAttempted reveals whether this error attempted to perform a restore.
-func (err AssertError) RestoreAttempted() bool {
-	return err.restoreAttempted
+func assertIn(okay bool, reason error) {
+	assert(okay, AssertError{
+		Err:   reason,
+		Phase: PreconditionPhase,
+	})
 }
 
-// RestoreSuccessful reveals whether this error was successful at performing a
-// restore as well as whether a restore was attempted.
-func (err AssertError) RestoreSuccessful() (successful bool, attempted bool) {
-	return err.restoreAttempted && err.restoreErr == nil, err.restoreAttempted
-}
-
-// RestoreFailed reveals whether this error was unsuccessful at performing a
-// restore as well as whether a restore was attempted.
-func (err AssertError) RestoreFailed() (failed bool, attempted bool) {
-	return err.restoreAttempted && err.restoreErr != nil, err.restoreAttempted
-}
-
-func assertIn(okay bool, reason string) {
-	assert(okay, fmt.Errorf("Precondition failed: %s", reason))
-}
-
-func assertOut(okay bool, reason string) {
-	assert(okay, fmt.Errorf("Postcondition failed: %s", reason))
+func assertOut(okay bool, reason error) {
+	assert(okay, AssertError{
+		Err:   reason,
+		Phase: PostconditionPhase,
+	})
 }
 
 func assertOutRestore(originalError AssertError) Assert {
-	return func(okay bool, reason string) {
-		assertRestore(okay, originalError, fmt.Errorf("Post-failure restore failed: %s", reason))
+	return func(okay bool, reason error) {
+		assert(okay, AssertError{
+			Err:         reason,
+			OriginalErr: originalError,
+			Phase:       PostRestorePhase,
+		})
 	}
 }
 
-func assertInvariantConstruct(okay bool, reason string) {
-	assert(okay, fmt.Errorf("Initialization invariant failed: %s", reason))
+func assertInvariantConstruct(okay bool, reason error) {
+	assert(okay, AssertError{
+		Err:   reason,
+		Phase: InitializationPhase,
+	})
 }
 
-func assertInvariantIn(okay bool, reason string) {
-	assert(okay, fmt.Errorf("Precondition invariant failed: %s", reason))
+func assertInvariantIn(okay bool, reason error) {
+	assert(okay, AssertError{
+		Err:   reason,
+		Phase: PreconditionInvariantPhase,
+	})
 }
 
-func assertInvariantOut(okay bool, reason string) {
-	assert(okay, fmt.Errorf("Postcondition invariant failed: %s", reason))
+func assertInvariantOut(okay bool, reason error) {
+	assert(okay, AssertError{
+		Err:   reason,
+		Phase: PostconditionInvariantPhase,
+	})
 }
 
 func assertInvariantRestore(originalError AssertError) Assert {
-	return func(okay bool, reason string) {
-		assertRestore(okay, originalError, fmt.Errorf("Post-failure restore invariant failed: %s", reason))
+	return func(okay bool, reason error) {
+		assert(okay, AssertError{
+			Err:         reason,
+			OriginalErr: originalError,
+			Phase:       PostRestoreInvariantPhase,
+		})
 	}
 }
 
-func assert(okay bool, decoratedReason error) {
+func assert(okay bool, decoratedReason AssertError) {
 	if !okay {
-		panic(AssertError{err: decoratedReason})
-	}
-}
-
-func assertRestore(okay bool, originalError AssertError, restoreError error) {
-	originalError.restoreAttempted = true
-	if !okay {
-		originalError.restoreErr = restoreError
-		panic(originalError)
+		panic(decoratedReason)
 	}
 }
