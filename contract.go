@@ -89,8 +89,8 @@ func handleRestore(i Invariable, out Condition, restore Restore) {
 	if r := recover(); r != nil {
 		if r, ok := r.(AssertErrorRestorable); ok {
 			restore()
-			out(assertOutRestore(r))
 			i.Invariant(assertInvariantRestore(r))
+			out(assertOutRestore(r))
 			panic(r.AssertError())
 		} else {
 			panic(r)
