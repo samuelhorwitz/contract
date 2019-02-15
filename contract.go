@@ -35,10 +35,6 @@
 // to swap in no-op replacement functions.
 package contract
 
-import (
-	"fmt"
-)
-
 // Construct should be called wherever an Invariable type is instantiated.
 // Idiomatically, many Go programs will use New functions for this. Go will not
 // enforce instantiation in any particular way, so be aware that if you make a
@@ -119,15 +115,7 @@ func InAndOutAndRestore(i Invariable, in PreToPostConditionWithRestore) Enclosed
 func handleRestore(i Invariable, out Condition, restore Restore) {
 	if r := recover(); r != nil {
 		if r, ok := r.(AssertErrorRestorable); ok {
-			if restore != nil {
-				restore()
-			} else {
-				panic(AssertRestoreError{
-					Err:         fmt.Errorf("Restore function undefined"),
-					OriginalErr: r,
-					Phase:       RestorePhase,
-				})
-			}
+			restore()
 			out(assertOutRestore(r))
 			i.Invariant(assertInvariantRestore(r))
 			panic(r.AssertError())
